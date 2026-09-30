@@ -33,6 +33,7 @@ try {
 <script src="/vendor/jspdf-2.5.1.umd.min.js"></script>
 <script src="/vendor/turf.min.js"></script>
 <script src="/vendor/image-slot.js"></script>
+<script src="/sources.js"></script>
 
 </head>
 <body>
@@ -432,7 +433,7 @@ try {
     <sc-if value="{{ paneData }}" hint-placeholder-val="{{ false }}">
     <div style="padding:12px 14px;border-bottom:1px solid #33373e;display:flex;flex-direction:column;gap:6px">
       <button sc-camel-on-click="{{ fetchZoningBtn }}" style="background:#24282e;border:1px solid #33373e;border-radius:3px;color:#e8e6e1;font-family:inherit;font-size:12px;padding:7px 10px;cursor:pointer;text-align:left" style-hover="background:#2c3138">Fetch zoning <span style="font-size:9px;color:#8b9098">(Toronto)</span></button>
-      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b9098;margin-top:4px">Planning</div>
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b9098;margin-top:4px">Planning · Toronto</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
       <sc-for list="{{ ovList }}" as="ov" hint-placeholder-count="5">
         <button data-ov="{{ ov.k }}" sc-camel-on-click="{{ toggleOv }}" title="{{ ov.label }}" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:5px;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#c9cbd0;font-family:inherit;font-size:10px;padding:5px 6px;cursor:pointer;text-align:left" style-hover="background:#2c3138">
@@ -442,6 +443,27 @@ try {
         </button>
       </sc-for>
       </div>
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b9098;margin-top:6px">Ontario</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+      <sc-for list="{{ ovListProv }}" as="ov" hint-placeholder-count="0">
+        <button data-ov="{{ ov.k }}" sc-camel-on-click="{{ toggleOv }}" title="{{ ov.label }}" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:5px;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#c9cbd0;font-family:inherit;font-size:10px;padding:5px 6px;cursor:pointer;text-align:left" style-hover="background:#2c3138">
+          <sc-if value="{{ ov.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:rgba(224,54,44,.18)"></span><span style="position:absolute;left:0;top:0;bottom:0;width:2px;background:#e0362c"></span></sc-if>
+          <span style="position:relative;flex:none;width:6px;height:6px;border-radius:1px;background:{{ ov.color }}"></span>
+          <span style="position:relative;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ov.short }}</span>
+        </button>
+      </sc-for>
+      </div>
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b9098;margin-top:6px">Local · {{ placeLabel }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+      <sc-for list="{{ ovListLocal }}" as="ov" hint-placeholder-count="0">
+        <button data-ov="{{ ov.k }}" sc-camel-on-click="{{ toggleOv }}" title="{{ ov.label }}" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:5px;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#c9cbd0;font-family:inherit;font-size:10px;padding:5px 6px;cursor:pointer;text-align:left" style-hover="background:#2c3138">
+          <sc-if value="{{ ov.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:rgba(224,54,44,.18)"></span><span style="position:absolute;left:0;top:0;bottom:0;width:2px;background:#e0362c"></span></sc-if>
+          <span style="position:relative;flex:none;width:6px;height:6px;border-radius:1px;background:{{ ov.color }}"></span>
+          <span style="position:relative;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ov.short }}</span>
+        </button>
+      </sc-for>
+      </div>
+      <div style="font-size:10px;color:#8b9098;line-height:1.35">{{ localNote }}</div>
       <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b9098;margin-top:6px">Context &amp; POI</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
       <sc-for list="{{ ovList2 }}" as="ov" hint-placeholder-count="0">
@@ -1434,6 +1456,7 @@ class Component extends DCLogic {
       m: Object.assign({}, sh.m, { den, mpp })
     }));
     this.scheduleKeyPlan(id, [c.lat, c.lng], mpp * size.x * 3); // key plan shows 3x the site plan extents
+    if (id === this.mapSheetId()) this.locateSoon(id);
   }
 
   drawKey(id) {
@@ -1659,6 +1682,7 @@ class Component extends DCLogic {
   // for whatever the sheet actually shows
   creditText(s, st) {
     const parts = [this.base(s.bm || st.basemap).credit];
+    const extra = [];
     const defs = this.ovDefs();
     const on = Object.entries(this.sheetOv(s.id)).filter(([k, v]) => v && defs[k]).map(([k]) => defs[k]);
     const osm = (s.kind !== 'data' && s.kind !== 'zoning') && (this.dget(s.id, 'roadLabels') || (s.kp && (s.kp.roads || []).length) || on.some(d => d.osm));
@@ -1666,6 +1690,8 @@ class Component extends DCLogic {
     const toronto = s.kind === 'data' || s.kind === 'zoning' || (s.apps || []).length || (s.zones || []).length || on.some(d => /toronto\.ca/.test(d.url || ''));
     if (toronto) parts.push('Contains information licensed under the Open Government Licence \u2013 Toronto.');
     if (on.some(d => /lioservices/.test(d.url || ''))) parts.push('Contains information licensed under the Open Government Licence \u2013 Ontario.');
+    on.forEach(d => { if (d.src && d.src.credit && parts.indexOf(d.src.credit) < 0 && extra.indexOf(d.src.credit) < 0) extra.push(d.src.credit); });
+    parts.push(...extra);
     if (/^Esri/.test(parts[0])) parts[0] = 'Powered by Esri. ' + parts[0];
     return parts.join(' ') + ' Not a plan of survey.';
   }
@@ -1681,13 +1707,32 @@ class Component extends DCLogic {
 
   async pickParcel(id, latlng, additive) {
     this.setState({ searchNote: additive ? 'Adding parcel\u2026' : 'Fetching parcel\u2026' });
-    const j = await this.agsQuery('https://gis.toronto.ca/arcgis/rest/services/cot_geospatial27/MapServer/36/query', {
+    const pt = {
       geometry: JSON.stringify({ x: latlng.lng, y: latlng.lat, spatialReference: { wkid: 4326 } }),
       geometryType: 'esriGeometryPoint', inSR: '4326', outSR: '4326',
-      spatialRel: 'esriSpatialRelIntersects', outFields: 'OBJECTID', returnGeometry: 'true'
-    });
-    const f = j && j.features && j.features[0];
-    if (!f || !f.geometry) { this.setState({ searchNote: 'No parcel found here (Toronto parcels only).' }); return; }
+      spatialRel: 'esriSpatialRelIntersects', returnGeometry: 'true'
+    };
+    let j = null, where = 'Toronto';
+    // outside Toronto: the municipality's (or region's) open parcel layer, where there is one
+    const local = this.isToronto() ? null : Object.entries(this.ovDefs()).find(([, d]) => d.src && d.src.parcels && window.SPM.applies(d.src, this.state.place));
+    if (local) {
+      where = this.srcArea(local[1].src);
+      try {
+        this.srcFound = this.srcFound || {};
+        if (!this.srcFound[local[0]]) this.srcFound[local[0]] = await window.SPM.resolve(local[1].src);
+        j = await window.SPM.query(this.srcFound[local[0]], Object.assign({}, pt, { outFields: '*' }));
+      } catch (e) {
+        this.setState({ searchNote: where + ' parcels couldn\u2019t load (' + String(e.message || e).slice(0, 80) + '). Draw the boundary with the Boundary tool (B).' });
+        return;
+      }
+    } else if (!this.isToronto()) {
+      this.setState({ searchNote: 'No open parcel data for ' + (window.SPM.placeName(this.state.place) || 'this area') + ' \u2014 draw the boundary with the Boundary tool (B).' });
+      return;
+    } else {
+      j = await this.agsQuery('https://gis.toronto.ca/arcgis/rest/services/cot_geospatial27/MapServer/36/query', Object.assign({}, pt, { outFields: 'OBJECTID' }));
+    }
+    const f = j && j.features && j.features.find(x => x.geometry && /Polygon/.test(x.geometry.type));
+    if (!f) { this.setState({ searchNote: 'No parcel found here (' + where + ' parcels).' }); return; }
     let ring = null;
     if (f.geometry.type === 'Polygon') ring = f.geometry.coordinates[0];
     else if (f.geometry.type === 'MultiPolygon') { let best = []; f.geometry.coordinates.forEach(p => { if (p[0].length > best.length) best = p[0]; }); ring = best; }
@@ -2017,7 +2062,75 @@ class Component extends DCLogic {
   }
 
   ovDefs() {
-    return this._ovCache || (this._ovCache = {
+    if (!this._ovCache) this._ovCache = Object.assign(this.torontoDefs(), this.sourceDefs());
+    return this._ovCache;
+  }
+
+  // Ontario-wide, conservation authority and municipal layers from sources.js
+  sourceDefs() {
+    const out = {};
+    ((window.SPM && window.SPM.sources) || []).forEach(src => {
+      out[src.k] = {
+        label: src.label, kind: 'poly', minZoom: src.minZoom, cap: src.cap, style: src.style, color: src.color,
+        group: src.area.prov ? 'prov' : 'local', src,
+        note: a => window.SPM.labelOf(src, (this.srcFound && this.srcFound[src.k] || {}).meta, a)
+      };
+    });
+    return out;
+  }
+
+  // resolve a source once (cached), then fetch the features in view
+  async srcQuery(k, d, map) {
+    this.srcFound = this.srcFound || {};
+    this.srcPending = this.srcPending || {};
+    this.srcFailed = this.srcFailed || {};
+    if (this.srcFailed[k] && Date.now() - this.srcFailed[k] < 300000) return null; // failed recently: retry in 5 min
+    try {
+      if (!this.srcFound[k]) {
+        this.srcPending[k] = this.srcPending[k] || window.SPM.resolve(d.src);
+        this.srcFound[k] = await this.srcPending[k];
+      }
+      return await window.SPM.query(this.srcFound[k], this.envParams(map, { resultRecordCount: String(d.cap || 300) }));
+    } catch (e) {
+      delete this.srcPending[k];
+      const first = !this.srcFailed[k];
+      this.srcFailed[k] = Date.now();
+      if (first) {
+        this.notice('\u201c' + d.label + '\u201d couldn\u2019t load (' + String(e.message || e).slice(0, 90) + '). The other layers still work; see /check.html for every source.');
+      }
+      return null;
+    }
+  }
+
+  // which municipality / region / conservation authority the map is over (cached per ~500 m)
+  locateSoon(id) {
+    const rec = this.maps[id]; if (!rec || !window.SPM) return;
+    clearTimeout(this.locT);
+    this.locT = setTimeout(async () => {
+      const c = rec.map.getCenter();
+      const key = c.lat.toFixed(3).slice(0, -1) + ',' + c.lng.toFixed(3).slice(0, -1);
+      this.placeCache = this.placeCache || {};
+      if (!this.placeCache[key]) this.placeCache[key] = window.SPM.locate(c.lat, c.lng);
+      const place = await this.placeCache[key];
+      if (!place.ok) delete this.placeCache[key]; // try again next move
+      const cur = this.state.place;
+      if (!cur || JSON.stringify(cur) !== JSON.stringify(place)) this.setState({ place });
+    }, 1000);
+  }
+
+  // short name of where a source applies, for list labels
+  srcArea(src) {
+    const a = src.area || {}, t = s => s.replace(/\b\w/g, c => c.toUpperCase());
+    return a.muni ? t(a.muni) : a.upper ? t(a.upper) + ' Region' : a.ca ? t(a.ca) + ' CA' : 'Ontario';
+  }
+
+  isToronto() {
+    const p = this.state.place;
+    return !p || !p.ok || /toronto/i.test((p.muni && p.muni.name) || '');
+  }
+
+  torontoDefs() {
+    return {
       opSecondary: { label: 'OP secondary plans (Toronto)', kind: 'poly', minZoom: 11,
         url: 'https://gis.toronto.ca/arcgis/rest/services/cot_geospatial11/MapServer/44/query', cap: 80,
         style: { color: '#0d5c2e', weight: 1.6, dashArray: '7 4', fillColor: '#0d5c2e', fillOpacity: 0.07 },
@@ -2102,7 +2215,7 @@ class Component extends DCLogic {
         osm: '"amenity"="place_of_worship"', note: a => a.name || 'Place of worship', color: '#6d28d9' },
       poiEv: { label: 'EV chargers (OSM)', kind: 'point', minZoom: 13, group: 'ctx', cap: 60,
         osm: '"amenity"="charging_station"', note: a => a.name || 'EV charging', color: '#0f766e' }
-    });
+    };
   }
 
   async refreshOverlays(id) {
@@ -2128,7 +2241,7 @@ class Component extends DCLogic {
     }
     const results = await Promise.all(active.map(k => {
       const d = defs[k];
-      const p = d.osm ? this.osmQuery(rec.map, d) : this.agsQuery(d.url, this.envParams(rec.map, { resultRecordCount: String(d.cap) }), 20000);
+      const p = d.src ? this.srcQuery(k, d, rec.map) : d.osm ? this.osmQuery(rec.map, d) : this.agsQuery(d.url, this.envParams(rec.map, { resultRecordCount: String(d.cap) }), 20000);
       return p.then(j => [k, j]);
     }));
     if (rec.ovStamp !== stamp || !this.maps[id]) return; // superseded or gone
@@ -2809,7 +2922,7 @@ class Component extends DCLogic {
             if (!defs[k]) return null;
             if (drawn && !drawn[k]) return null; // nothing rendered: keep it out of the legend
             const base = defs[k].label.replace(/ \((Toronto|OSM)\)$/i, '');
-            return { label: short[base.toLowerCase()] || base.slice(0, 15), color: defs[k].color || (defs[k].style || {}).color || '#14161a' };
+            return { label: defs[k].src ? defs[k].src.short : (short[base.toLowerCase()] || base.slice(0, 15)), color: defs[k].color || (defs[k].style || {}).color || '#14161a' };
           }).filter(Boolean);
         })(),
         hasLegend: Object.values(this.sheetOv(s.id)).some(v => v) && s.kind !== 'data' && s.kind !== 'zoning',
@@ -2848,6 +2961,16 @@ class Component extends DCLogic {
       setBasemap: e => { const v = e.target.value; this.patch(st.focused, () => ({ bm: v })); this.setState({ basemap: v }); },
       isParcel: st.tool === 'parcel',
       ovList: Object.entries(this.ovDefs()).filter(([, d]) => !d.group).map(([k, d]) => ({ k, label: d.label, short: this.ovShort(d.label), color: d.color || (d.style || {}).color || '#8b9098', on: !!this.sheetOv(mid || st.focused)[k] })),
+      ovListProv: Object.entries(this.ovDefs()).filter(([, d]) => d.group === 'prov').map(([k, d]) => ({ k, label: d.label, short: d.src.short, color: d.color || '#8b9098', on: !!this.sheetOv(mid || st.focused)[k] })),
+      // local layers are listed only once the map's municipality is known
+      ovListLocal: Object.entries(this.ovDefs()).filter(([k, d]) => d.group === 'local' && ((st.place && st.place.ok && window.SPM.applies(d.src, st.place)) || this.sheetOv(mid || st.focused)[k]))
+        .map(([k, d]) => ({ k, label: d.label + ' \u2014 ' + this.srcArea(d.src), short: d.src.short, color: d.color || '#8b9098', on: !!this.sheetOv(mid || st.focused)[k] })),
+      placeLabel: st.place && st.place.ok ? (window.SPM.placeName(st.place) || 'here') : 'finding\u2026',
+      localNote: !(st.place && st.place.ok)
+        ? 'Local layers appear once the app knows which municipality the map is over (from Ontario\u2019s boundary data).'
+        : (Object.values(this.ovDefs()).some(d => d.group === 'local' && window.SPM.applies(d.src, st.place))
+          ? 'Local layers are listed for where the map is. Check /check.html if one doesn\u2019t load.'
+          : 'No open local layers found for ' + (window.SPM.placeName(st.place) || 'this area') + ' yet.'),
       ovList2: Object.entries(this.ovDefs()).filter(([, d]) => d.group === 'ctx').map(([k, d]) => ({ k, label: d.label, short: this.ovShort(d.label), color: d.color || (d.style || {}).color || '#8b9098', on: !!this.sheetOv(mid || st.focused)[k] })),
       paneSheet: (st.pane || 'sheet') === 'sheet',
       paneData: (st.pane || 'sheet') === 'data',

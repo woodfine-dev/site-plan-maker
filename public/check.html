@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data source check · Site Plan Maker</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #f6f5f2; --fg: #14161a; --muted: #5c5a56; --line: #dcdad6; --ok: #15803d; --bad: #b91c1c; --warn: #a16207; --card: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111418; --fg: #e8e6e1; --muted: #8b9098; --line: #2c3138; --ok: #4ade80; --bad: #f87171; --warn: #facc15; --card: #1c1f24; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p { color: var(--muted); margin: 0 0 12px; max-width: 70ch; }
+  .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+  button { background: #e0362c; color: #fff; border: 0; border-radius: 4px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .sum { color: var(--muted); }
+  .wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); position: sticky; top: 0; background: var(--card); }
+  td.url { max-width: 380px; word-break: break-all; font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+  .ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; } .wait { color: var(--muted); } .warn { color: var(--warn); }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Data source check</h1>
+  <p>Tests every layer in <code>sources.js</code> from this browser, the same way Site Plan Maker loads them. It shows whether each one loads and what it resolved to. Nothing is saved or sent anywhere.</p>
+  <p>Fails with “blocked or unreachable” mean the server refused this site (CORS) or is down. “No public item” means the ArcGIS Online lookup didn't find it and the entry needs a direct URL.</p>
+  <div class="bar"><button id="run">Run checks</button><span class="sum" id="sum"></span></div>
+  <div class="wrap"><table>
+    <thead><tr><th>Status</th><th>Layer</th><th>Area</th><th>Resolved to</th><th>Geometry · label field · max records · GeoJSON</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+</main>
+<script src="/sources.js"></script>
+<script>
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const area = (a) => a.prov ? 'Ontario' : a.muni ? a.muni : a.upper ? a.upper + ' (region)' : a.ca ? a.ca + ' (CA)' : '';
+  const rows = document.getElementById('rows'), sum = document.getElementById('sum'), run = document.getElementById('run');
+  const list = [
+    ...Object.entries(SPM.where).map(([k, url]) => ({ k: 'where-' + k, label: 'Boundaries: ' + k + (k === 'ca' ? ' (conservation authority)' : ''), area: { prov: true }, url, locator: true })),
+    ...SPM.sources,
+  ];
+  rows.innerHTML = list.map((s) => `<tr id="r-${s.k}"><td class="wait">—</td><td>${esc(s.label)}</td><td>${esc(area(s.area))}</td><td class="url">${esc(s.url || (s.item ? 'item ' + s.item : 'search "' + s.search + '"'))}</td><td></td></tr>`).join('');
+
+  async function check(s) {
+    const tr = document.getElementById('r-' + s.k);
+    const cell = (i, html, cls) => { tr.children[i].innerHTML = html; if (cls) tr.children[i].className = cls; };
+    cell(0, 'checking…', 'wait');
+    try {
+      const found = await SPM.resolve(s);
+      const j = await SPM.query(found, { where: '1=1', resultRecordCount: '1' });
+      const m = found.meta || {};
+      const n = j.features.length;
+      cell(0, n ? 'loads' : 'loads (empty)', n ? 'ok' : 'warn');
+      cell(3, `<a href="${esc(found.url)}?f=pjson" target="_blank" rel="noopener">${esc(found.url)}</a>` + (found.item ? `<br>${esc(found.item.title)} · ${esc(found.item.owner)}` : ''), 'url');
+      cell(4, esc([m.geometryType && m.geometryType.replace('esriGeometry', ''), m.displayField || '(none)', m.maxRecordCount, found.geojson ? 'yes' : 'no (converted)'].join(' · ')));
+      return true;
+    } catch (e) {
+      cell(0, 'fails', 'bad');
+      cell(4, esc(e.message || e));
+      return false;
+    }
+  }
+
+  run.onclick = async () => {
+    run.disabled = true;
+    let ok = 0, done = 0;
+    const queue = list.slice();
+    const worker = async () => { while (queue.length) { const s = queue.shift(); if (await check(s)) ok++; done++; sum.textContent = `${done} of ${list.length} checked · ${ok} load`; } };
+    await Promise.all(Array.from({ length: 6 }, worker));
+    // and where-am-I detection at a few known spots
+    const spots = [['Mississauga (Square One)', 43.5932, -79.6441], ['Vaughan (VMC)', 43.7941, -79.5273], ['Oshawa (downtown)', 43.8971, -78.8658], ['Barrie (downtown)', 44.3894, -79.6903]];
+    for (const [name, lat, lng] of spots) {
+      const p = await SPM.locate(lat, lng);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="${p.ok ? 'ok' : 'bad'}">${p.ok ? 'found' : 'fails'}</td><td>Where-am-I test: ${esc(name)}</td><td>${esc(SPM.placeName(p))}</td><td class="url">${esc([p.muni && p.muni.name, p.upper && p.upper.name, p.ca && p.ca.name].filter(Boolean).join(' · '))}</td><td>${esc(SPM.sources.filter((s) => !s.area.prov && SPM.applies(s, p)).map((s) => s.label).join(', ') || '(no local layers)')}</td>`;
+      rows.appendChild(tr);
+    }
+    sum.textContent = `${ok} of ${list.length} sources load from this browser.`;
+    run.disabled = false;
+  };
+</script>
+</body>
+</html>
