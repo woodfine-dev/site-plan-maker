@@ -262,6 +262,14 @@
     if (loaded) save(); else load().then(save);
   }
 
+  // Site Plan Maker reads and writes logos directly for plan export/import and cleanup.
+  window.imageSlots = {
+    get: (id) => slots[id] || null,
+    set: (id, val) => setSlot(id, val),
+    keys: () => Object.keys(slots).filter((k) => k.indexOf('__') !== 0),
+  };
+  load();
+
   // ── Image downscale ─────────────────────────────────────────────────────
   // Encode through a canvas so the sidecar carries resized bytes, not the
   // raw upload. Longest side is capped at 2× the slot's rendered width

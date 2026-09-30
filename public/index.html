@@ -5,7 +5,34 @@
 <script>window.__resources = {"https://unpkg.com/react@18.3.1/umd/react.production.min.js": "/vendor/react-18.3.1.production.min.js", "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "/vendor/react-dom-18.3.1.production.min.js"};</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// Logos used to be stored per sheet id ("logo-s1") and so were shared by every plan tab.
+// Give each plan its own copy ("logo-<plan>-s1") before the logo slots load.
+try {
+  var K = 'site-plan-maker:image-slots', slots = JSON.parse(localStorage.getItem(K) || 'null');
+  if (slots && !slots.__perPlan) {
+    var ix = JSON.parse(localStorage.getItem('spm-docs-v1') || 'null');
+    var docs = ix && ix.docs && ix.docs.length ? ix.docs : [{ id: 'd1' }];
+    Object.keys(slots).forEach(function (k) {
+      var m = /^logo-(s\d+)$/.exec(k);
+      if (!m) return;
+      docs.forEach(function (d) { var nk = 'logo-' + d.id + '-' + m[1]; if (!(nk in slots)) slots[nk] = slots[k]; });
+      delete slots[k];
+    });
+    slots.__perPlan = 1;
+    localStorage.setItem(K, JSON.stringify(slots));
+  }
+} catch (e) {}
+</script>
 <script src="/vendor/dc-runtime.js"></script>
+<!-- Libraries load here, once. Inside the template's <helmet> they ran twice (once as the page
+     parsed, again when the runtime mounted the helmet), leaving two Leaflet copies that
+     disagreed about which bounds objects were theirs. -->
+<script src="/vendor/leaflet-1.9.4.js"></script>
+<script src="/vendor/html2canvas-1.4.1.min.js"></script>
+<script src="/vendor/jspdf-2.5.1.umd.min.js"></script>
+<script src="/vendor/turf.min.js"></script>
+<script src="/vendor/image-slot.js"></script>
 
 </head>
 <body>
@@ -213,11 +240,6 @@
 }
 </style>
 <style>.leaflet-image-layer,.leaflet-layer,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-pane,.leaflet-pane>canvas,.leaflet-pane>svg,.leaflet-tile,.leaflet-tile-container,.leaflet-zoom-box{position:absolute;left:0;top:0}.leaflet-container{overflow:hidden}.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none}.leaflet-tile::selection{background:0 0}.leaflet-safari .leaflet-tile{image-rendering:-webkit-optimize-contrast}.leaflet-safari .leaflet-tile-container{width:1600px;height:1600px;-webkit-transform-origin:0 0}.leaflet-marker-icon,.leaflet-marker-shadow{display:block}.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-shadow-pane img,.leaflet-container .leaflet-tile,.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer{max-width:none!important;max-height:none!important;width:auto;padding:0}.leaflet-container img.leaflet-tile{mix-blend-mode:plus-lighter}.leaflet-container.leaflet-touch-zoom{-ms-touch-action:pan-x pan-y;touch-action:pan-x pan-y}.leaflet-container.leaflet-touch-drag{-ms-touch-action:pinch-zoom;touch-action:none;touch-action:pinch-zoom}.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom{-ms-touch-action:none;touch-action:none}.leaflet-container{-webkit-tap-highlight-color:transparent}.leaflet-container a{-webkit-tap-highlight-color:rgba(51,181,229,.4)}.leaflet-tile{filter:inherit;visibility:hidden}.leaflet-tile-loaded{visibility:inherit}.leaflet-zoom-box{width:0;height:0;-moz-box-sizing:border-box;box-sizing:border-box;z-index:800}.leaflet-overlay-pane svg{-moz-user-select:none}.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}.leaflet-vml-shape{width:1px;height:1px}.lvml{behavior:url(#default#VML);display:inline-block;position:absolute}.leaflet-control{position:relative;z-index:800;pointer-events:visiblePainted;pointer-events:auto}.leaflet-bottom,.leaflet-top{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-control{float:left;clear:both}.leaflet-right .leaflet-control{float:right}.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}.leaflet-fade-anim .leaflet-popup{opacity:0;-webkit-transition:opacity .2s linear;-moz-transition:opacity .2s linear;transition:opacity .2s linear}.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}.leaflet-zoom-animated{-webkit-transform-origin:0 0;-ms-transform-origin:0 0;transform-origin:0 0}svg.leaflet-zoom-animated{will-change:transform}.leaflet-zoom-anim .leaflet-zoom-animated{-webkit-transition:-webkit-transform .25s cubic-bezier(0,0,.25,1);-moz-transition:-moz-transform .25s cubic-bezier(0,0,.25,1);transition:transform .25s cubic-bezier(0,0,.25,1)}.leaflet-pan-anim .leaflet-tile,.leaflet-zoom-anim .leaflet-tile{-webkit-transition:none;-moz-transition:none;transition:none}.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:-webkit-grab;cursor:-moz-grab;cursor:grab}.leaflet-crosshair,.leaflet-crosshair .leaflet-interactive{cursor:crosshair}.leaflet-control,.leaflet-popup-pane{cursor:auto}.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive,.leaflet-dragging .leaflet-marker-draggable{cursor:move;cursor:-webkit-grabbing;cursor:-moz-grabbing;cursor:grabbing}.leaflet-image-layer,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none}.leaflet-image-layer.leaflet-interactive,.leaflet-marker-icon.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive,svg.leaflet-image-layer.leaflet-interactive path{pointer-events:visiblePainted;pointer-events:auto}.leaflet-container{background:#ddd;outline-offset:1px}.leaflet-container a{color:#0078a8}.leaflet-zoom-box{border:2px dotted #38f;background:rgba(255,255,255,.5)}.leaflet-container{font-family:"Helvetica Neue",Arial,Helvetica,sans-serif;font-size:12px;font-size:.75rem;line-height:1.5}.leaflet-bar{box-shadow:0 1px 5px rgba(0,0,0,.65);border-radius:4px}.leaflet-bar a{background-color:#fff;border-bottom:1px solid #ccc;width:26px;height:26px;line-height:26px;display:block;text-align:center;text-decoration:none;color:#000}.leaflet-bar a,.leaflet-control-layers-toggle{background-position:50% 50%;background-repeat:no-repeat;display:block}.leaflet-bar a:focus,.leaflet-bar a:hover{background-color:#f4f4f4}.leaflet-bar a:first-child{border-top-left-radius:4px;border-top-right-radius:4px}.leaflet-bar a:last-child{border-bottom-left-radius:4px;border-bottom-right-radius:4px;border-bottom:none}.leaflet-bar a.leaflet-disabled{cursor:default;background-color:#f4f4f4;color:#bbb}.leaflet-touch .leaflet-bar a{width:30px;height:30px;line-height:30px}.leaflet-touch .leaflet-bar a:first-child{border-top-left-radius:2px;border-top-right-radius:2px}.leaflet-touch .leaflet-bar a:last-child{border-bottom-left-radius:2px;border-bottom-right-radius:2px}.leaflet-control-zoom-in,.leaflet-control-zoom-out{font:bold 18px 'Lucida Console',Monaco,monospace;text-indent:1px}.leaflet-touch .leaflet-control-zoom-in,.leaflet-touch .leaflet-control-zoom-out{font-size:22px}.leaflet-control-layers{box-shadow:0 1px 5px rgba(0,0,0,.4);background:#fff;border-radius:5px}.leaflet-control-layers-toggle{background-image:url("/img/c67d9617.png");width:36px;height:36px}.leaflet-retina .leaflet-control-layers-toggle{background-image:url("/img/585c177a.png");background-size:26px 26px}.leaflet-touch .leaflet-control-layers-toggle{width:44px;height:44px}.leaflet-control-layers .leaflet-control-layers-list,.leaflet-control-layers-expanded .leaflet-control-layers-toggle{display:none}.leaflet-control-layers-expanded .leaflet-control-layers-list{display:block;position:relative}.leaflet-control-layers-expanded{padding:6px 10px 6px 6px;color:#333;background:#fff}.leaflet-control-layers-scrollbar{overflow-y:scroll;overflow-x:hidden;padding-right:5px}.leaflet-control-layers-selector{margin-top:2px;position:relative;top:1px}.leaflet-control-layers label{display:block;font-size:13px;font-size:1.08333em}.leaflet-control-layers-separator{height:0;border-top:1px solid #ddd;margin:5px -10px 5px -6px}.leaflet-default-icon-path{background-image:url("/img/16fd042e.png")}.leaflet-container .leaflet-control-attribution{background:#fff;background:rgba(255,255,255,.8);margin:0}.leaflet-control-attribution,.leaflet-control-scale-line{padding:0 5px;color:#333;line-height:1.4}.leaflet-control-attribution a{text-decoration:none}.leaflet-control-attribution a:focus,.leaflet-control-attribution a:hover{text-decoration:underline}.leaflet-attribution-flag{display:inline!important;vertical-align:baseline!important;width:1em;height:.6669em}.leaflet-left .leaflet-control-scale{margin-left:5px}.leaflet-bottom .leaflet-control-scale{margin-bottom:5px}.leaflet-control-scale-line{border:2px solid #777;border-top:none;line-height:1.1;padding:2px 5px 1px;white-space:nowrap;-moz-box-sizing:border-box;box-sizing:border-box;background:rgba(255,255,255,.8);text-shadow:1px 1px #fff}.leaflet-control-scale-line:not(:first-child){border-top:2px solid #777;border-bottom:none;margin-top:-2px}.leaflet-control-scale-line:not(:first-child):not(:last-child){border-bottom:2px solid #777}.leaflet-touch .leaflet-bar,.leaflet-touch .leaflet-control-attribution,.leaflet-touch .leaflet-control-layers{box-shadow:none}.leaflet-touch .leaflet-bar,.leaflet-touch .leaflet-control-layers{border:2px solid rgba(0,0,0,.2);background-clip:padding-box}.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:12px}.leaflet-popup-content{margin:13px 24px 13px 20px;line-height:1.3;font-size:13px;font-size:1.08333em;min-height:1px}.leaflet-popup-content p{margin:17px 0;margin:1.3em 0}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none}.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;pointer-events:auto;-webkit-transform:rotate(45deg);-moz-transform:rotate(45deg);-ms-transform:rotate(45deg);transform:rotate(45deg)}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#fff;color:#333;box-shadow:0 3px 14px rgba(0,0,0,.4)}.leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;border:none;text-align:center;width:24px;height:24px;font:16px/24px Tahoma,Verdana,sans-serif;color:#757575;text-decoration:none;background:0 0}.leaflet-container a.leaflet-popup-close-button:focus,.leaflet-container a.leaflet-popup-close-button:hover{color:#585858}.leaflet-popup-scrolled{overflow:auto}.leaflet-oldie .leaflet-popup-content-wrapper{-ms-zoom:1}.leaflet-oldie .leaflet-popup-tip{width:24px;margin:0 auto}.leaflet-oldie .leaflet-control-layers,.leaflet-oldie .leaflet-control-zoom,.leaflet-oldie .leaflet-popup-content-wrapper,.leaflet-oldie .leaflet-popup-tip{border:1px solid #999}.leaflet-div-icon{background:#fff;border:1px solid #666}.leaflet-tooltip{position:absolute;padding:6px;background-color:#fff;border:1px solid #fff;border-radius:3px;color:#222;white-space:nowrap;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.4)}.leaflet-tooltip.leaflet-interactive{cursor:pointer;pointer-events:auto}.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before,.leaflet-tooltip-top:before{position:absolute;pointer-events:none;border:6px solid transparent;background:0 0;content:""}.leaflet-tooltip-bottom{margin-top:6px}.leaflet-tooltip-top{margin-top:-6px}.leaflet-tooltip-bottom:before,.leaflet-tooltip-top:before{left:50%;margin-left:-6px}.leaflet-tooltip-top:before{bottom:0;margin-bottom:-12px;border-top-color:#fff}.leaflet-tooltip-bottom:before{top:0;margin-top:-12px;margin-left:-6px;border-bottom-color:#fff}.leaflet-tooltip-left{margin-left:-6px}.leaflet-tooltip-right{margin-left:6px}.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{top:50%;margin-top:-6px}.leaflet-tooltip-left:before{right:0;margin-right:-12px;border-left-color:#fff}.leaflet-tooltip-right:before{left:0;margin-left:-12px;border-right-color:#fff}@media print{.leaflet-control{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
-<script src="/vendor/leaflet-1.9.4.js"></script>
-<script src="/vendor/html2canvas-1.4.1.min.js"></script>
-<script src="/vendor/jspdf-2.5.1.umd.min.js"></script>
-<script src="/vendor/turf.min.js"></script>
-<script src="/vendor/image-slot.js"></script>
 <style>
   body { margin: 0; background: #565b63; }
   a { color: #b3372e; }
@@ -398,10 +420,11 @@
     <div style="padding:12px 14px;border-bottom:1px solid #33373e;display:flex;flex-direction:column;gap:6px">
       <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b9098">Save &amp; restore</div>
       <div style="display:flex;gap:6px">
-        <button sc-camel-on-click="{{ exportJson }}" style="flex:1;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#e8e6e1;font-family:inherit;font-size:11px;padding:6px 4px;cursor:pointer" style-hover="background:#2c3138">Export JSON</button>
-        <button sc-camel-on-click="{{ importJson }}" style="flex:1;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#e8e6e1;font-family:inherit;font-size:11px;padding:6px 4px;cursor:pointer" style-hover="background:#2c3138">Import JSON</button>
+        <button sc-camel-on-click="{{ exportJson }}" style="flex:1;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#e8e6e1;font-family:inherit;font-size:11px;padding:6px 4px;cursor:pointer" style-hover="background:#2c3138" title="Save this plan, with its logo, to a file">Export plan</button>
+        <button sc-camel-on-click="{{ importJson }}" style="flex:1;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#e8e6e1;font-family:inherit;font-size:11px;padding:6px 4px;cursor:pointer" style-hover="background:#2c3138" title="Open plan or backup files in new tabs">Import</button>
       </div>
-      <div style="font-size:10px;color:#8b9098;line-height:1.35">Work auto-saves in this browser.</div>
+      <button sc-camel-on-click="{{ exportAll }}" title="Save every open plan, with logos, to one file" style="flex:1;background:#24282e;border:1px solid #33373e;border-radius:3px;color:#e8e6e1;font-family:inherit;font-size:11px;padding:6px 4px;cursor:pointer" style-hover="background:#2c3138">Back up all plans</button>
+      <div style="font-size:10px;color:#8b9098;line-height:1.35">Work auto-saves in this browser only. Back up regularly: clearing browser data deletes your plans.</div>
       <button sc-camel-on-click="{{ resetAll }}" style="background:#24282e;border:1px solid #5a2521;border-radius:3px;color:#e07a72;font-family:inherit;font-size:11px;padding:6px 10px;cursor:pointer;text-align:left" style-hover="background:#2e2223">Reset all <span style="font-size:9px;color:#8b9098">(keeps logo)</span></button>
     </div>
     </sc-if>
@@ -652,7 +675,7 @@
             </div>
 
             <div style="flex:none;border-top:2.5px solid #14161a;border-bottom:2.5px solid #14161a;height:64px;padding:8px 12px;box-sizing:border-box">
-              <image-slot id="logo-{{ sheet.id }}" shape="rect" fit="contain" placeholder="Drop logo" style="width:100%;height:100%"></image-slot>
+              <image-slot id="{{ sheet.logoId }}" shape="rect" fit="contain" placeholder="Drop logo" style="width:100%;height:100%"></image-slot>
             </div>
 
             <div style="flex:none;padding:5px 9px 6px;text-align:right;font-size:8px;line-height:1.3;color:#8a8782">{{ sheet.creditText }}</div>
@@ -679,7 +702,8 @@ class Component extends DCLogic {
     const idx = this.loadDocIndex();
     let saved = null;
     if (idx) {
-      try { const raw = localStorage.getItem(this.docKey(idx.docId)); const p = raw ? JSON.parse(raw) : null; if (p && Array.isArray(p.sheets) && p.sheets.length) saved = this.stateFromPayload(p); } catch (e) {}
+      const p = this.readDoc(idx.docId);
+      if (p) saved = this.stateFromPayload(p);
     }
     // pre-tabs saves live under the old single-document key: adopt as the first tab
     if (!saved) saved = this.loadSaved();
@@ -716,7 +740,100 @@ class Component extends DCLogic {
   }
 
   saveDocIndex(docs, docId) {
-    try { localStorage.setItem('spm-docs-v1', JSON.stringify({ v: 1, docs, docId })); } catch (e) {}
+    try { localStorage.setItem('spm-docs-v1', JSON.stringify({ v: 1, docs, docId })); return true; } catch (e) { return false; }
+  }
+
+  // a stored document, or null. An unreadable one is copied aside first, so the next
+  // autosave can't write over something that might still be recovered.
+  readDoc(id) {
+    let raw = null;
+    try { raw = localStorage.getItem(this.docKey(id)); } catch (e) { return null; }
+    if (!raw) return null;
+    try {
+      const p = JSON.parse(raw);
+      if (p && Array.isArray(p.sheets) && p.sheets.length) return p;
+    } catch (e) {}
+    try { localStorage.setItem(this.docKey(id) + '-unreadable-' + Date.now(), raw); } catch (e) {}
+    this.loadProblem = 'A saved plan couldn\u2019t be read, so it opened blank. The damaged copy was kept in this browser.';
+    return null;
+  }
+
+  // save a document; if storage is full, retry without the key-plan road cache (rebuilt on
+  // load). Returns false when nothing could be written.
+  writeDoc(id, payload) {
+    try { localStorage.setItem(this.docKey(id), JSON.stringify(payload)); return true; } catch (e) {}
+    try {
+      const lite = Object.assign({}, payload, {
+        sheets: payload.sheets.map(s => Object.assign({}, s, { kp: Object.assign({}, s.kp, { roads: [], water: [], fallback: false }) }))
+      });
+      localStorage.setItem(this.docKey(id), JSON.stringify(lite));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // a standing warning while saving fails; cleared by the next good save
+  saveWarn(msg) {
+    let el = document.getElementById('spm-save-warn');
+    if (!msg) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'spm-save-warn';
+      el.setAttribute('data-chrome', '1');
+      el.setAttribute('role', 'alert');
+      el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:5000;max-width:560px;background:#5a1d19;color:#fff;border:1px solid #e0362c;border-radius:4px;padding:9px 14px;font:13px/1.4 "Archivo Narrow",sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.4)';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+  }
+
+  // a notice that stays until dismissed
+  notice(msg) {
+    let el = document.getElementById('spm-notice');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'spm-notice';
+      el.setAttribute('data-chrome', '1');
+      el.setAttribute('role', 'alert');
+      el.style.cssText = 'position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:5000;max-width:560px;display:flex;gap:12px;align-items:flex-start;background:#2a2410;color:#fff;border:1px solid #d19a00;border-radius:4px;padding:9px 10px 9px 14px;font:13px/1.4 "Archivo Narrow",sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.4)';
+      const txt = document.createElement('span');
+      const x = document.createElement('button');
+      x.textContent = '\u00d7'; x.title = 'Dismiss';
+      x.style.cssText = 'flex:none;background:none;border:none;color:#fff;font-size:16px;line-height:1;cursor:pointer;padding:0 2px';
+      x.onclick = () => el.remove();
+      el.append(txt, x);
+      document.body.appendChild(el);
+    }
+    el.firstChild.textContent = msg;
+  }
+
+  saveCurrent() {
+    const ok = this.writeDoc(this.state.docId, this.docPayload()) && this.saveDocIndex(this.state.docs, this.state.docId);
+    this.saveWarn(ok ? null : 'Not saved \u2014 this browser\u2019s storage is full or blocked. Use File \u203a Back up all plans now, then close plans you no longer need.');
+    return ok;
+  }
+
+  // show a stored document (the caller has already saved or discarded the current one)
+  openDoc(id, docs, note) {
+    const p = this.readDoc(id);
+    this.dropAllMaps();
+    this.hist = [];
+    const base = p
+      ? this.stateFromPayload(p)
+      : (this.seq = 0, { sheets: [this.blank()], focused: null, tool: 'pan', units: this.state.units, basemap: 'esri', roadLabels: true, mask: 0, ov: {}, searchNote: 'New plan \u2014 search an address to begin.' });
+    if (note) base.searchNote = note;
+    if (this.loadProblem) { this.notice(this.loadProblem); this.loadProblem = null; }
+    if (!base.focused || !base.sheets.some(s => s.id === base.focused)) base.focused = base.sheets[0].id;
+    base.docs = docs; base.docId = id;
+    this.saveDocIndex(docs, id);
+    this.setState(base);
+  }
+
+  // image-slot values for this document's logos, keyed by sheet id
+  docLogos(docId, sheets) {
+    const api = window.imageSlots, out = {};
+    if (!api) return out;
+    sheets.forEach(s => { const v = api.get('logo-' + docId + '-' + s.id); if (v) out[s.id] = v; });
+    return out;
   }
 
   docPayload(st) {
@@ -752,18 +869,9 @@ class Component extends DCLogic {
 
   switchDoc(id) {
     if (id === this.state.docId) return;
-    try { localStorage.setItem(this.docKey(this.state.docId), JSON.stringify(this.docPayload())); } catch (e) {}
-    let p = null;
-    try { const raw = localStorage.getItem(this.docKey(id)); p = raw ? JSON.parse(raw) : null; } catch (e) {}
-    this.dropAllMaps();
-    const base = (p && Array.isArray(p.sheets) && p.sheets.length)
-      ? this.stateFromPayload(p)
-      : (this.seq = 0, { sheets: [this.blank()], focused: null, tool: 'pan', units: this.state.units, basemap: 'esri', roadLabels: true, mask: 0, ov: {}, searchNote: 'New plan \u2014 search an address to begin.' });
-    if (!base.focused || !base.sheets.some(s => s.id === base.focused)) base.focused = base.sheets[0].id;
-    base.docs = this.state.docs;
-    base.docId = id;
-    this.saveDocIndex(this.state.docs, id);
-    this.setState(base);
+    clearTimeout(this.saveT);
+    if (!this.saveCurrent() && !window.confirm('This plan\u2019s latest changes couldn\u2019t be saved (browser storage is full). Switch anyway and lose them?')) return;
+    this.openDoc(id, this.state.docs);
   }
 
   loadSaved() {
@@ -803,12 +911,7 @@ class Component extends DCLogic {
 
   persist() {
     clearTimeout(this.saveT);
-    this.saveT = setTimeout(() => {
-      try {
-        localStorage.setItem(this.docKey(this.state.docId), JSON.stringify(this.docPayload()));
-        this.saveDocIndex(this.state.docs, this.state.docId);
-      } catch (e) { /* storage full/blocked: skip */ }
-    }, 600);
+    this.saveT = setTimeout(() => this.saveCurrent(), 600);
   }
 
   blank() {
@@ -893,6 +996,7 @@ class Component extends DCLogic {
 
   componentDidMount() {
     this.boot();
+    if (this.loadProblem) { this.notice(this.loadProblem); this.loadProblem = null; }
     this.fitTitleText();
     // live-fit while typing in any title block field
     this.fitInputHandler = e => { if (e.target && e.target.tagName === 'INPUT' && e.target.closest('[data-sheet-page]')) this.fitTitleText(); };
@@ -950,8 +1054,10 @@ class Component extends DCLogic {
     }
     const wait = () => {
       if (!this.mounted) return;
-      if (window.L) this.syncMaps();
-      else setTimeout(wait, 60);
+      if (window.L) {
+        this.setState(st => ({ sheets: st.sheets.map(s => { const n = Object.assign({}, s); this.remeasure(n); return n; }) }));
+        this.syncMaps();
+      } else setTimeout(wait, 60);
     };
     this.mounted = true;
     wait();
@@ -1019,12 +1125,12 @@ class Component extends DCLogic {
   }
 
   // undo history: snapshot sheets before meaningful edits (not measurement/view churn)
-  pushHist(change) {
+  pushHist(change, sheets) {
     const keys = ['boundary', 'extras', 'labels', 'rects', 'texts', 'polys', 'notes', 'revs'];
     if (change && !keys.some(k => k in change)) return;
     this.hist = this.hist || [];
     // snapshot only the undoable keys — not kp roads, app tables, or zoning data
-    const snap = JSON.stringify(this.state.sheets.map(s => {
+    const snap = JSON.stringify((sheets || this.state.sheets).map(s => {
       const o = { id: s.id };
       keys.forEach(k => { o[k] = s[k]; });
       return o;
@@ -1060,7 +1166,7 @@ class Component extends DCLogic {
       const src = st.sheets.find(s => s.id === id);
       if (!src) return null;
       const change = fn(src);
-      this.pushHist(change);
+      this.pushHist(change, st.sheets);
       const bChanged = ('boundary' in change && change.boundary !== src.boundary) || ('extras' in change && change.extras !== src.extras);
       return {
         sheets: st.sheets.map(s => {
@@ -1085,9 +1191,18 @@ class Component extends DCLogic {
   remeasure(next) {
     const rings = [next.boundary].concat(next.extras || []).filter(r => r && r.length > 2);
     let area = 0, perim = 0;
-    rings.forEach(r => { const g = this.measure(r); area += g.area; perim += g.perim; });
+    // parcels are measured as their union: overlaps count once and shared lot lines drop out
+    const polys = rings.length > 1 ? this.unionPolys(rings) : null;
+    if (polys) {
+      polys.forEach(([outer, ...holes]) => {
+        const g = this.measure(outer); area += g.area; perim += g.perim;
+        holes.forEach(h => { const gh = this.measure(h); area -= gh.area; perim += gh.perim; });
+      });
+    } else {
+      rings.forEach(r => { const g = this.measure(r); area += g.area; perim += g.perim; });
+    }
     if (!rings.length) { const g = this.measure(next.boundary); area = g.area; perim = g.perim; }
-    next.m = Object.assign({}, next.m, { area, perim });
+    next.m = Object.assign({}, next.m, { area: Math.max(0, area), perim });
     if (next.kp && next.kp.c && rings.length) {
       const kpRings = this.mergedRings(next) || rings;
       next.kp = Object.assign({}, next.kp, {
@@ -1312,15 +1427,11 @@ class Component extends DCLogic {
     const p2 = map.containerPointToLatLng([100, size.y / 2]);
     const mpp = map.distance(p1, p2) / 100;
     const den = Math.round(mpp * 1000 / (25.4 / 60));
-    const nice = [5, 10, 20, 25, 50, 75, 100, 150, 200, 250, 400, 500, 750, 1000, 2000];
-    let pick = nice[0];
-    for (const n of nice) { if (n / mpp <= 84) pick = n; }
-    const barPx = Math.round(pick / mpp);
     const s = this.sheet(id); if (!s) return;
-    const geo = this.measure(s.boundary);
-    this.patch(id, () => ({
+    // area/perim belong to remeasure (the whole assembly); a view change only moves the scale
+    this.patch(id, sh => ({
       center: [c.lat, c.lng], zoom: z,
-      m: { area: geo.area, perim: geo.perim, den: this.round3(den), barPx, barLabel: pick >= 1000 ? (pick / 1000) + ' km' : pick + ' m' }
+      m: Object.assign({}, sh.m, { den, mpp })
     }));
     this.scheduleKeyPlan(id, [c.lat, c.lng], mpp * size.x * 3); // key plan shows 3x the site plan extents
   }
@@ -1364,14 +1475,7 @@ class Component extends DCLogic {
     if (rec.stKey === key) return;
     rec.stKey = key;
     const q = '[out:json][timeout:20];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential)$"]["name"](' + key + ');out geom;';
-    const hosts = ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-    let els = null;
-    for (const h of hosts) {
-      try {
-        const r = await fetch(h + '?data=' + encodeURIComponent(q));
-        if (r.ok) { els = (await r.json()).elements || []; break; }
-      } catch (e) { /* try next host */ }
-    }
+    const els = await this.overpass(q);
     if (rec.stKey !== key || !this.maps[id]) return; // superseded
     if (!els) {
       rec.stKey = null; // failed fetch: retry on next pan or after a pause
@@ -1421,6 +1525,12 @@ class Component extends DCLogic {
 
   async buildKeyPlan(id, center, span) {
     const s = this.sheet(id); if (!s) return;
+    // the key plan is 3x the view: small pans and zooms don't need a new one
+    const kp = s.kp || {};
+    if (kp.c && kp.sp && (kp.roads || []).length) {
+      const moved = Math.hypot((center[0] - kp.c[0]) * 110540, (center[1] - kp.c[1]) * 111320 * Math.cos(center[0] * Math.PI / 180));
+      if (moved < kp.sp * 0.15 && span / kp.sp > 0.8 && span / kp.sp < 1.25) return;
+    }
     const W = 196, H = 150;
     const dLat = (span * (H / W) / 2) * 1.12 / 110540;
     const dLng = (span / 2) * 1.12 / (111320 * Math.cos(center[0] * Math.PI / 180));
@@ -1429,20 +1539,7 @@ class Component extends DCLogic {
     const classes = span < 2400 ? 'motorway|trunk|primary|secondary|tertiary|unclassified|residential' : 'motorway|trunk|primary|secondary';
     const q = '[out:json][timeout:25];(way["highway"~"^(' + classes + ')$"](' + bbox + ');way["natural"="water"](' + bbox + ');way["natural"="coastline"](' + bbox + ');relation["natural"="water"](' + bbox + '););out geom;';
     this.kpBusy = this.kpBusy || {}; this.kpBusy[id] = true; this.forceUpdate();
-    const hosts = ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-    let els = null;
-    for (const h of hosts) {
-      try {
-        const ac = new AbortController();
-        const t = setTimeout(() => ac.abort(), 25000);
-        const r = await fetch(h + '?data=' + encodeURIComponent(q), { signal: ac.signal });
-        clearTimeout(t);
-        if (!r.ok) continue;
-        const got = (await r.json()).elements || [];
-        els = got;
-        if (got.length) break; // an empty result might be a limited mirror — try the next one
-      } catch (e) { /* try next mirror */ }
-    }
+    const els = await this.overpass(q, { timeout: 25000, retryEmpty: true });
     if (!els) {
       this.kpBusy[id] = false;
       // keep whatever roads we already have; retry once after a pause
@@ -1506,24 +1603,71 @@ class Component extends DCLogic {
     const tags = Array.isArray(d.osm) ? d.osm : [d.osm];
     const body = tags.map(t => 'nwr[' + t + '](' + bbox + ');').join('');
     const q = '[out:json][timeout:20];(' + body + ');out center ' + (d.cap || 60) + ';';
+    const els = await this.overpass(q);
+    if (!els) return null;
+    return {
+      type: 'FeatureCollection',
+      features: els.map(el => {
+        const lat = el.lat != null ? el.lat : el.center && el.center.lat;
+        const lon = el.lon != null ? el.lon : el.center && el.center.lon;
+        if (lat == null || lon == null) return null;
+        return { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: el.tags || {} };
+      }).filter(Boolean)
+    };
+  }
+
+  // Overpass (OpenStreetMap) query shared by street labels, the key plan and POI overlays.
+  // Results are cached for 10 minutes, identical in-flight queries share one request, and a
+  // mirror that answers 429/503/504 (busy or rate-limited) is skipped for a minute.
+  // Resolves to the elements array, or null when every mirror failed.
+  overpass(q, opts) {
+    const o = opts || {};
+    const now = Date.now();
+    this.opCache = this.opCache || new Map();
+    this.opFlight = this.opFlight || new Map();
+    this.opCool = this.opCool || {};
+    const hit = this.opCache.get(q);
+    if (hit && now - hit.t < 600000) return Promise.resolve(hit.els);
+    if (this.opFlight.has(q)) return this.opFlight.get(q);
     const hosts = ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-    for (const h of hosts) {
-      try {
-        const r = await fetch(h + '?data=' + encodeURIComponent(q));
-        if (!r.ok) continue;
-        const els = (await r.json()).elements || [];
-        return {
-          type: 'FeatureCollection',
-          features: els.map(el => {
-            const lat = el.lat != null ? el.lat : el.center && el.center.lat;
-            const lon = el.lon != null ? el.lon : el.center && el.center.lon;
-            if (lat == null || lon == null) return null;
-            return { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: el.tags || {} };
-          }).filter(Boolean)
-        };
-      } catch (e) { /* try next mirror */ }
-    }
-    return null;
+    const run = (async () => {
+      let els = null;
+      for (const h of hosts) {
+        if ((this.opCool[h] || 0) > Date.now()) continue;
+        const ac = new AbortController();
+        const t = setTimeout(() => ac.abort(), o.timeout || 20000);
+        try {
+          const r = await fetch(h + '?data=' + encodeURIComponent(q), { signal: ac.signal });
+          if (r.status === 429 || r.status === 503 || r.status === 504) { this.opCool[h] = Date.now() + 60000; continue; }
+          if (!r.ok) continue;
+          els = (await r.json()).elements || [];
+          if (els.length || !o.retryEmpty) break; // an empty result might be a limited mirror — try the next one
+        } catch (e) { /* try next mirror */ } finally { clearTimeout(t); }
+      }
+      if (els) {
+        this.opCache.set(q, { t: Date.now(), els });
+        if (this.opCache.size > 60) this.opCache.delete(this.opCache.keys().next().value);
+      }
+      return els;
+    })();
+    this.opFlight.set(q, run);
+    run.finally(() => this.opFlight.delete(q));
+    return run;
+  }
+
+  // data credits for a sheet: basemap, plus OpenStreetMap and Open Government Licence notices
+  // for whatever the sheet actually shows
+  creditText(s, st) {
+    const parts = [this.base(s.bm || st.basemap).credit];
+    const defs = this.ovDefs();
+    const on = Object.entries(this.sheetOv(s.id)).filter(([k, v]) => v && defs[k]).map(([k]) => defs[k]);
+    const osm = (s.kind !== 'data' && s.kind !== 'zoning') && (this.dget(s.id, 'roadLabels') || (s.kp && (s.kp.roads || []).length) || on.some(d => d.osm));
+    if (osm && !/OpenStreetMap/.test(parts[0])) parts.push('Streets and places \u00a9 OpenStreetMap contributors (ODbL).');
+    const toronto = s.kind === 'data' || s.kind === 'zoning' || (s.apps || []).length || (s.zones || []).length || on.some(d => /toronto\.ca/.test(d.url || ''));
+    if (toronto) parts.push('Contains information licensed under the Open Government Licence \u2013 Toronto.');
+    if (on.some(d => /lioservices/.test(d.url || ''))) parts.push('Contains information licensed under the Open Government Licence \u2013 Ontario.');
+    if (/^Esri/.test(parts[0])) parts[0] = 'Powered by Esri. ' + parts[0];
+    return parts.join(' ') + ' Not a plan of survey.';
   }
 
   envParams(map, extra) {
@@ -2033,7 +2177,8 @@ class Component extends DCLogic {
               // width, so shrink-to-fit collapses to the longest word and breaks addresses apart
               const lines = rows.map(x => {
                 const sub = this.esc(d.box.sub ? (d.box.sub(x) || '') : '');
-                const href = d.box.href ? d.box.href(x) : '';
+                const raw = d.box.href ? String(d.box.href(x) || '') : '';
+                const href = /^https:\/\//i.test(raw) ? raw : ''; // service data: never javascript: or data: links
                 const body = '<div style="font-size:8.5px;line-height:1.25;color:#2d3138;white-space:nowrap">' + (sub || 'Application') + '</div>';
                 return href
                   ? '<a href="' + this.esc(href) + '" target="_blank" rel="noopener" title="Open this application on the City planning site" style="display:block;text-decoration:none;border-top:1px solid #dcdad6;padding:2px 0 1px" style-hover="">' + body + '</a>'
@@ -2045,17 +2190,17 @@ class Component extends DCLogic {
                 + lines
                 + '</div></div>';
               const mk = L.marker(ll, { interactive: true, zIndexOffset: 500, icon: L.divIcon({ className: '', iconSize: [null, null], iconAnchor: [0, 8], html: html }) });
-              if (txt) mk.bindTooltip(txt, { direction: 'top', offset: [0, -8] });
+              if (txt) mk.bindTooltip(this.esc(txt), { direction: 'top', offset: [0, -8] });
               return mk;
             }
             const mk = L.marker(ll, { interactive: true, icon: L.divIcon({ className: '', iconSize: [10, 10], iconAnchor: [5, 5], html: '<div style="width:10px;height:10px;border-radius:50%;background:' + d.color + ';border:1.5px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.5)"></div>' }) });
-            if (txt) mk.bindTooltip(txt, { direction: 'top', offset: [0, -6] });
+            if (txt) mk.bindTooltip(this.esc(txt), { direction: 'top', offset: [0, -6] });
             return mk;
           },
           onEachFeature: (f, ly) => {
             if (d.kind !== 'poly' || !d.note) return;
             const txt = d.note(f.properties || {});
-            if (txt) ly.bindTooltip(String(txt), { sticky: true, direction: 'top' });
+            if (txt) ly.bindTooltip(this.esc(txt), { sticky: true, direction: 'top' });
           },
           interactive: d.kind === 'point' || (d.kind === 'poly' && !!d.note)
         }).addTo(rec.ovG);
@@ -2067,6 +2212,30 @@ class Component extends DCLogic {
     if (n < 100) return Math.round(n);
     const mag = Math.pow(10, String(Math.round(n)).length - 2);
     return Math.round(n / mag) * mag;
+  }
+
+  // "1:2,000" when the true scale is within 0.5% of a round figure, else "≈ 1:2,150"
+  scaleText(den) {
+    if (!den) return '\u2014';
+    const nice = this.round3(den);
+    if (Math.abs(den - nice) / nice <= 0.005) return '1:' + nice.toLocaleString();
+    const mag = den < 1000 ? 1 : Math.pow(10, String(Math.round(den)).length - 3);
+    return '\u2248 1:' + (Math.round(den / mag) * mag).toLocaleString();
+  }
+
+  // scale bar at most 84px long, in m/km or ft/mi to match the sheet's units
+  scaleBar(mpp, units) {
+    if (units === 'imperial') {
+      const fpp = mpp * 3.28084;
+      const nice = [10, 20, 25, 50, 75, 100, 150, 200, 250, 400, 500, 750, 1000, 1500, 2000, 2640, 5280];
+      let pick = nice[0];
+      for (const n of nice) { if (n / fpp <= 84) pick = n; }
+      return { barPx: Math.round(pick / fpp), barLabel: pick === 5280 ? '1 mi' : pick === 2640 ? '\u00bd mi' : pick.toLocaleString() + ' ft' };
+    }
+    const nice = [5, 10, 20, 25, 50, 75, 100, 150, 200, 250, 400, 500, 750, 1000, 2000];
+    let pick = nice[0];
+    for (const n of nice) { if (n / mpp <= 84) pick = n; }
+    return { barPx: Math.round(pick / mpp), barLabel: pick >= 1000 ? (pick / 1000) + ' km' : pick + ' m' };
   }
 
   onMapClick(id, e) {
@@ -2380,7 +2549,13 @@ class Component extends DCLogic {
   // union of boundary + extras with shared edges dissolved; returns rings as [lat,lng][] arrays
   mergedRings(s) {
     const rings = [s.boundary].concat(s.extras || []).filter(r => r && r.length > 2);
-    if (rings.length < 2 || !window.turf) return null;
+    const polys = rings.length < 2 ? null : this.unionPolys(rings);
+    return polys ? polys.flat() : null;
+  }
+
+  // union of [lat,lng] rings as polygons, each [outer, ...holes] in [lat,lng]; null if turf fails
+  unionPolys(rings) {
+    if (!window.turf) return null;
     try {
       let u = null;
       rings.forEach(r => {
@@ -2392,7 +2567,7 @@ class Component extends DCLogic {
       if (!u) return null;
       const g = u.geometry;
       const polys = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
-      return polys.flatMap(p => p.map(ring => ring.slice(0, -1).map(c => [c[1], c[0]])));
+      return polys.map(p => p.map(ring => ring.slice(0, -1).map(c => [c[1], c[0]])));
     } catch (e) { return null; }
   }
 
@@ -2413,6 +2588,16 @@ class Component extends DCLogic {
   }
   // quotes are escaped too: esc() output is interpolated into attributes (href, title) as well as text
   esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+  // save an object as a pretty-printed .json download
+  download(obj, name) {
+    const blob = new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = String(name || 'site-plan').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 80) + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
 
   // toast + sidebar status in one call
   toast(msg) {
@@ -2629,9 +2814,9 @@ class Component extends DCLogic {
         })(),
         hasLegend: Object.values(this.sheetOv(s.id)).some(v => v) && s.kind !== 'data' && s.kind !== 'zoning',
         areaText: this.areaText(s.m.area, this.dget(s.id, 'units')),
-        scaleText: s.m.den ? '1:' + s.m.den.toLocaleString() : '—',
-        barPx: s.m.barPx, barLabel: s.m.barLabel,
-        creditText: this.base(s.bm || st.basemap).credit + ' Not a plan of survey.',
+        scaleText: this.scaleText(s.m.den),
+        ...(s.m.mpp ? this.scaleBar(s.m.mpp, this.dget(s.id, 'units')) : { barPx: s.m.barPx, barLabel: s.m.barLabel }),
+        creditText: this.creditText(s, st),
         kpRoads: s.kp.roads, kpWater: s.kp.water || [], kpLabels: s.kp.labels, kpSite: s.kp.site,
         kpHasRoads: s.kp.roads.length > 0,
         ringStyle: { position: 'absolute', inset: '-3px', pointerEvents: 'none', border: '2px solid ' + (s.id === st.focused ? '#e0362c' : 'transparent') },
@@ -2642,6 +2827,7 @@ class Component extends DCLogic {
         revs: s.revs || [],
         hasRevs: !!(s.revs || []).length,
         chipText: (s.kind === 'data' ? '\u25a4 ' : s.kind === 'zoning' ? '\u00a7 ' : '') + s.f.dwg,
+        logoId: 'logo-' + st.docId + '-' + s.id,
         chipTitle: [s.f.title, s.f.address].filter(Boolean).join(' \u2014 ') || 'Sheet ' + s.f.dwg,
         showHint: s.kind !== 'data' && s.kind !== 'zoning' && !s.boundary.length && !(s.extras || []).length && !s.f.address
       })),
@@ -2688,7 +2874,9 @@ class Component extends DCLogic {
       docTabs: (st.docs || []).map(d => ({ id: d.id, name: d.name, active: d.id === st.docId })),
       pickDoc: e => this.switchDoc(e.currentTarget.dataset.doc),
       addDoc: () => {
-        try { localStorage.setItem(this.docKey(st.docId), JSON.stringify(this.docPayload())); } catch (e) {}
+        clearTimeout(this.saveT);
+        if (!this.saveCurrent() && !window.confirm('This plan\u2019s latest changes couldn\u2019t be saved (browser storage is full). Open a new plan anyway and lose them?')) return;
+        this.hist = [];
         const n = 'd' + Date.now().toString(36);
         const docs = (st.docs || []).concat([{ id: n, name: 'Plan ' + ((st.docs || []).length + 1) }]);
         this.dropAllMaps();
@@ -2719,20 +2907,13 @@ class Component extends DCLogic {
         const d = docs.find(x => x.id === id);
         if (!window.confirm('Close "' + (d ? d.name : 'this plan') + '"? Its sheets and settings are deleted.')) return;
         try { localStorage.removeItem(this.docKey(id)); } catch (e2) {}
+        if (window.imageSlots) window.imageSlots.keys().filter(k => k.indexOf('logo-' + id + '-') === 0).forEach(k => window.imageSlots.set(k, null));
         const left = docs.filter(x => x.id !== id);
         if (id !== st.docId) { this.saveDocIndex(left, st.docId); this.setState({ docs: left }); return; }
         // closing the active tab: fall through to its neighbour
+        clearTimeout(this.saveT);
         const nx = left[Math.max(0, docs.findIndex(x => x.id === id) - 1)] || left[0];
-        let p = null;
-        try { const raw = localStorage.getItem(this.docKey(nx.id)); p = raw ? JSON.parse(raw) : null; } catch (e2) {}
-        this.dropAllMaps();
-        const base = (p && Array.isArray(p.sheets) && p.sheets.length)
-          ? this.stateFromPayload(p)
-          : (this.seq = 0, { sheets: [this.blank()], focused: null, tool: 'pan', units: st.units, basemap: 'esri', roadLabels: true, mask: 0, ov: {}, searchNote: '' });
-        if (!base.focused || !base.sheets.some(s => s.id === base.focused)) base.focused = base.sheets[0].id;
-        base.docs = left; base.docId = nx.id;
-        this.saveDocIndex(left, nx.id);
-        this.setState(base);
+        this.openDoc(nx.id, left);
       },
       resetAll: () => {
         if (!window.confirm('Reset everything? Boundary, callouts, notes, title block, overlays and settings will be cleared. The logo is kept.')) return;
@@ -2746,6 +2927,7 @@ class Component extends DCLogic {
           delete this.maps[mid];
         });
         this.pendingPoly = null;
+        this.hist = [];
         const fresh = this.blank();
         fresh.id = keepId;
         fresh.f.dwg = 'SP-1';
@@ -2765,11 +2947,22 @@ class Component extends DCLogic {
         rec.map.setZoom(z, { animate: false });
       },
       exportJson: () => {
-        const { sheets, focused, units, basemap, roadLabels, mask } = st;
-        const blob = new Blob([JSON.stringify({ v: 1, sheets, focused, units, basemap, roadLabels, mask }, null, 1)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = 'site-plan.json'; a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        const cur = (st.docs || []).find(d => d.id === st.docId);
+        const name = cur ? cur.name : 'Plan';
+        const plan = Object.assign({ v: 1, app: 'site-plan-maker', name }, this.docPayload(), { logos: this.docLogos(st.docId, st.sheets) });
+        this.download(plan, name);
+      },
+      exportAll: () => {
+        clearTimeout(this.saveT);
+        this.saveCurrent();
+        const plans = [];
+        (st.docs || []).forEach(d => {
+          const p = d.id === st.docId ? this.docPayload() : this.readDoc(d.id);
+          if (p) plans.push(Object.assign({ v: 1, app: 'site-plan-maker', name: d.name }, p, { logos: this.docLogos(d.id, p.sheets) }));
+        });
+        const dt = new Date().toISOString().slice(0, 10);
+        this.download({ v: 1, app: 'site-plan-maker', kind: 'backup', saved: new Date().toISOString(), plans }, 'site-plans-backup-' + dt);
+        this.note('Backed up ' + plans.length + ' plan' + (plans.length === 1 ? '' : 's') + '.');
       },
       importJson: () => {
         const inp = document.createElement('input');
@@ -2778,19 +2971,29 @@ class Component extends DCLogic {
           const f = inp.files && inp.files[0]; if (!f) return;
           const rd = new FileReader();
           rd.onload = () => {
+            // every imported plan opens in a new tab; nothing already open is replaced
+            let plans;
             try {
               const sv = JSON.parse(rd.result);
-              if (!sv || !Array.isArray(sv.sheets) || !sv.sheets.length) throw new Error('bad');
-              this.adoptSheets(sv.sheets);
-              Object.keys(this.maps).forEach(mid => { try { this.maps[mid].map.remove(); } catch (e) {} delete this.maps[mid]; });
-              this.setState({
-                sheets: sv.sheets,
-                focused: sv.sheets.some(s => s.id === sv.focused) ? sv.focused : sv.sheets[0].id,
-                units: sv.units === 'imperial' ? 'imperial' : 'metric',
-                basemap: sv.basemap || 'esri', roadLabels: sv.roadLabels !== false, mask: +sv.mask || 0,
-                searchNote: 'Imported ' + sv.sheets.length + ' sheet(s).'
-              });
-            } catch (e) { this.setState({ searchNote: 'Import failed: not a valid save file.' }); }
+              plans = sv && Array.isArray(sv.plans) ? sv.plans : [sv];
+              plans = plans.filter(p => p && Array.isArray(p.sheets) && p.sheets.length);
+              if (!plans.length) throw new Error('bad');
+            } catch (e) { this.note('Import failed: not a Site Plan Maker file.'); return; }
+            clearTimeout(this.saveT);
+            if (!this.saveCurrent() && !window.confirm('This plan\u2019s latest changes couldn\u2019t be saved (browser storage is full). Import anyway and lose them?')) return;
+            const fileName = f.name.replace(/\.json$/i, '');
+            let docs = (this.state.docs || []).slice(), first = null, failed = 0;
+            plans.forEach((p, i) => {
+              const id = 'd' + Date.now().toString(36) + i;
+              const payload = { v: 1, sheets: p.sheets, focused: p.focused, units: p.units, basemap: p.basemap, roadLabels: p.roadLabels, mask: p.mask, ov: p.ov || {} };
+              if (!this.writeDoc(id, payload)) { failed++; return; }
+              Object.entries(p.logos || {}).forEach(([sid, v]) => { if (window.imageSlots && v) window.imageSlots.set('logo-' + id + '-' + sid, v); });
+              docs.push({ id, name: String(p.name || (plans.length > 1 ? fileName + ' ' + (i + 1) : fileName)).slice(0, 80) });
+              if (!first) first = id;
+            });
+            if (!first) { this.saveWarn('Import failed \u2014 this browser\u2019s storage is full. Close plans you no longer need and try again.'); return; }
+            const n = plans.length - failed;
+            this.openDoc(first, docs, 'Imported ' + n + ' plan' + (n === 1 ? '' : 's') + ' as new tab' + (n === 1 ? '' : 's') + (failed ? ' (' + failed + ' didn\u2019t fit in storage)' : '') + '.');
           };
           rd.readAsText(f);
         };
@@ -2828,7 +3031,7 @@ class Component extends DCLogic {
       clearBoundary: () => this.patch(st.focused, () => ({ boundary: [], extras: [] })),
       undoNow: () => this.undo(),
       zoomSiteBtn: () => this.zoomToSite(),
-      curScale: (() => { const s2 = this.sheet(mid || st.focused); return s2 && s2.m && s2.m.den ? '1:' + s2.m.den.toLocaleString() : ''; })(),
+      curScale: (() => { const s2 = this.sheet(mid || st.focused); return s2 && s2.m && s2.m.den ? this.scaleText(s2.m.den) : ''; })(),
       chipClick: e => {
         const cid = e.currentTarget.dataset.sheet;
         this.setState({ focused: cid });

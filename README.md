@@ -11,15 +11,21 @@ the title block, and export the set to PDF.
 - Export the whole set, or just the focused sheet, as an 11×17 PDF.
 
 Everything you draw is saved in your browser (`localStorage`), per browser and per
-device. There's no account or server-side storage.
+device. There's no account or server-side storage, so use **File › Back up all plans**
+now and then: it saves every open plan, logos included, to one `.json` file. **Import**
+opens a plan or backup file in new tabs and never replaces what's open. If the browser's
+storage fills up, a red banner says saving has stopped.
 
 ## Run locally
 
-Needs Node 20 or later. There are no dependencies to install.
+Needs Node 20 or later. The app itself has no dependencies; Playwright is only for the
+browser tests.
 
 ```bash
-npm start        # http://localhost:8080  (set PORT to change it)
-npm test         # checks every asset the page loads is served, and the server's path handling
+npm start                              # http://localhost:8080  (set PORT to change it)
+npm test                               # every asset the page loads is served; server path handling
+npm install && npx playwright install chromium
+npm run test:e2e                       # the app in Chromium, with map and data services faked
 ```
 
 Any static file server pointed at `public/` works as well.
@@ -42,10 +48,11 @@ public/
     leaflet-1.9.4.js  map
     turf.min.js       geometry: areas, lengths, offsets
     html2canvas, jspdf  PDF export
-    image-slot.js     the title-block logo drop box (saves to localStorage)
+    image-slot.js     the title-block logo drop box (saves to localStorage, one logo per plan)
   fonts/            Archivo Narrow and IBM Plex Mono
   img/              Leaflet marker images
 server.js           zero-dependency static server for local use
+tests/              server and asset tests (*.test.js), browser tests (*.e2e.js)
 render.yaml         Render Blueprint
 ```
 
