@@ -1,0 +1,64 @@
+# Site Plan Maker
+
+Draw 11×17 landscape site plan sheets over a live aerial or street map, fill in
+the title block, and export the set to PDF.
+
+- Search an address or `lat, lng`, then pan and zoom to frame the site.
+- Tools: boundary (B), parcel (P), callout (L), text (T), polygon (O), erase (E), pan (V); ⌃Z undoes.
+- Several sheets per plan, and several plans open at once as tabs.
+- Imagery: Esri World Imagery, Carto, OpenStreetMap, OpenTopoMap, USGS and more. Toronto and Ontario data layers too.
+- Title block with key plan, site area, notes, revisions, scale bar and a logo you can drop in.
+- Export the whole set, or just the focused sheet, as an 11×17 PDF.
+
+Everything you draw is saved in your browser (`localStorage`), per browser and per
+device. There's no account or server-side storage.
+
+## Run locally
+
+Needs Node 20 or later. There are no dependencies to install.
+
+```bash
+npm start        # http://localhost:8080  (set PORT to change it)
+npm test         # checks every asset the page loads is served, and the server's path handling
+```
+
+Any static file server pointed at `public/` works as well.
+
+## Deploy on Render
+
+`render.yaml` describes a Render **static site** that publishes `public/`, with no
+build step. In the Render dashboard choose **New → Blueprint**, pick this
+repository, and apply. Every push to `main` redeploys, and pull requests get
+preview URLs.
+
+## Layout
+
+```
+public/
+  index.html        the app: markup, styles and its logic (the <script type="text/x-dc"> block)
+  vendor/           libraries, vendored so the app has no CDN dependency at runtime
+    dc-runtime.js     the template runtime the page is written for ({{ }}, <sc-for>, <sc-if>)
+    react-*.js        React 18.3.1, which the runtime renders with
+    leaflet-1.9.4.js  map
+    turf.min.js       geometry: areas, lengths, offsets
+    html2canvas, jspdf  PDF export
+    image-slot.js     the title-block logo drop box (saves to localStorage)
+  fonts/            Archivo Narrow and IBM Plex Mono
+  img/              Leaflet marker images
+server.js           zero-dependency static server for local use
+render.yaml         Render Blueprint
+```
+
+The app was exported from Claude Design as a single self-unpacking HTML file.
+This repository is that file unpacked into ordinary files. The one change to
+behaviour is that the logo box now saves to `localStorage`, since the Claude
+Design host it used to save through isn't here.
+
+## Network
+
+The browser calls these services directly: map tiles (Esri ArcGIS Online,
+Carto, OpenStreetMap, OpenTopoMap, CyclOSM, USGS), Nominatim for address
+search, Overpass for roads and buildings, and City of Toronto and Ontario
+(LIO) GIS services for the Toronto and Ontario layers. Follow each provider's
+usage policy. Nominatim, for example, allows at most one request per second
+and doesn't allow heavy use.

@@ -1,0 +1,14 @@
+{
+  "name": "site-plan-maker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Draw 11x17 site plan sheets over a live map, with a title block, and export them to PDF or PNG.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
