@@ -127,6 +127,16 @@ test("check page runs every source and reports each one", async () => {
   assert.equal(await status("where-muni"), "loads");
   assert.equal(await status("miZoning"), "fails");
   assert.ok(await page.getByText("Where-am-I test: Mississauga (Square One)").count());
+  // Copy results: the whole table as tab-separated text, one source per line
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
+  await page.getByRole("button", { name: "Copy results" }).click();
+  await page.getByRole("button", { name: "Copied ✓" }).waitFor();
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(text, /^Site Plan Maker data source check/);
+  assert.match(text, /sources load from this browser/);
+  assert.match(text, /\nloads\tOfficial Plan land use\tmississauga\t/);
+  assert.match(text, /\nfails\tZoning\tmississauga\t/);
+  assert.match(text, /Where-am-I test: Mississauga \(Square One\)/);
   assert.deepEqual(errors, []);
   await page.close();
 });
